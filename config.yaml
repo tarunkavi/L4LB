@@ -1,0 +1,5 @@
+address: ":5555"
+mode: proxy
+backends:
+  - address: "localhost:9001"
+  - address: "localhost:9002"
