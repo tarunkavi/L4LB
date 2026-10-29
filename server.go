@@ -5,11 +5,19 @@ import "net"
 type server struct {
 	config   config
 	listener net.Listener
+	backends *backendManager
+	clients  *clientManager
 }
 
-func newServer(address string) *server {
+func newServer(cfg config) *server {
+	m := &backendManager{}
+	for _, bc := range cfg.Backends {
+		m.register(bc.Address)
+	}
 	return &server{
-		config: config{Address: address},
+		config:   cfg,
+		backends: m,
+		clients:  &clientManager{},
 	}
 }
 
@@ -28,7 +36,12 @@ func (s *server) acceptLoop() error {
 		if err != nil {
 			return err
 		}
-		c := newClient(conn)
-		c.readLoop()
+		b := s.backends.distribute()
+		if b == nil {
+			conn.Close()
+			continue
+		}
+		c := s.clients.register(conn)
+		go c.forward(b)
 	}
 }
